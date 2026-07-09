@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STRATA — Trading Utilities Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0A0D14;
+    --panel: #10151F;
+    --panel-2: #141B29;
+    --border: #232B3D;
+    --border-soft: #1A2130;
+    --text: #C9D3E0;
+    --text-dim: #6B7688;
+    --text-bright: #EDF1F7;
+    --green: #35D28A;
+    --green-dim: #1B4A38;
+    --red: #F0555F;
+    --red-dim: #4A1F24;
+    --amber: #E0A840;
+    --amber-dim: #4A3A18;
+    --blue: #5B8DEF;
+    --radius: 3px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body{
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(91,141,239,0.06), transparent 40%),
+      radial-gradient(circle at 85% 10%, rgba(53,210,138,0.05), transparent 35%);
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  .display{ font-family:'Space Grotesk', sans-serif; }
+
+  /* ===== Ticker ===== */
+  .ticker-wrap{
+    background: #070A10;
+    border-bottom:1px solid var(--border);
+    overflow:hidden;
+    white-space:nowrap;
+    height:34px;
+    display:flex;
+    align-items:center;
+  }
+  .ticker-track{
+    display:inline-flex;
+    animation: scroll-left 38s linear infinite;
+  }
+  .ticker-item{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    padding:0 22px;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    color: var(--text-dim);
+    border-right:1px solid var(--border-soft);
+  }
+  .ticker-item .sym{ color: var(--text-bright); font-weight:600; }
+  .ticker-item.up .chg{ color: var(--green); }
+  .ticker-item.down .chg{ color: var(--red); }
+  @keyframes scroll-left{
+    0%{ transform: translateX(0); }
+    100%{ transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ticker-track{ animation: none; }
+  }
+
+  /* ===== Header ===== */
+  header.hero{
+    max-width:1120px;
+    margin:0 auto;
+    padding:40px 24px 28px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:24px;
+    flex-wrap:wrap;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color: var(--amber);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:40px;
+    color: var(--text-bright);
+    letter-spacing:-0.01em;
+    line-height:1.05;
+  }
+  h1 span{ color: var(--text-dim); font-weight:500; }
+  .hero-sub{
+    max-width:340px;
+    font-size:13px;
+    color: var(--text-dim);
+    line-height:1.55;
+  }
+
+  /* ===== Nav — keycap style ===== */
+  nav.deck{
+    max-width:1120px;
+    margin:22px auto 0;
+    padding:0 24px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .key{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    background: linear-gradient(180deg, #171F2E, #10151F);
+    border:1px solid var(--border);
+    border-bottom:2px solid #060810;
+    color: var(--text-dim);
+    padding:11px 16px;
+    border-radius: var(--radius);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    transition: color .15s ease, border-color .15s ease, transform .05s ease;
+    user-select:none;
+  }
+  .key .fk{
+    color: var(--amber);
+    font-weight:600;
+    font-size:11px;
+    opacity:0.85;
+  }
+  .key:hover{ color: var(--text-bright); border-color:#3A4560; }
+  .key:active{ transform: translateY(1px); }
+  .key.active{
+    color: var(--text-bright);
+    border-color: var(--amber);
+    box-shadow: 0 0 0 1px rgba(224,168,64,0.15) inset;
+  }
+  .key.active .fk{ color: var(--bg); background: var(--amber); padding:1px 5px; border-radius:2px; }
+
+  /* ===== Main layout ===== */
+  main{
+    max-width:1120px;
+    margin:0 auto;
+    padding:28px 24px 0;
+  }
+  .panel{
+    display:none;
+  }
+  .panel.active{ display:block; animation: fade-in .25s ease; }
+  @keyframes fade-in{ from{opacity:0; transform: translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:20px;
+  }
+  @media (max-width: 760px){ .grid{ grid-template-columns: 1fr; } }
+
+  .card{
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    padding:22px;
+  }
+  .card-title{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:15px;
+    color: var(--text-bright);
+    margin-bottom:4px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .card-title .dot{ width:6px; height:6px; border-radius:50%; background: var(--amber); }
+  .card-desc{
+    font-size:12px;
+    color: var(--text-dim);
+    margin-bottom:18px;
+    line-height:1.5;
+  }
+
+  label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    color: var(--text-dim);
+    margin-bottom:6px;
+  }
+  .field{ margin-bottom:16px; }
+  .field-row{ display:flex; gap:12px; }
+  .field-row .field{ flex:1; }
+  input[type=number], select{
+    width:100%;
+    background: #0C111B;
+    border:1px solid var(--border);
+    color: var(--text-bright);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    padding:10px 12px;
+    border-radius: var(--radius);
+    outline:none;
+    transition: border-color .15s ease;
+  }
+  input[type=number]:focus, select:focus{ border-color: var(--blue); }
+  input[type=radio]{ accent-color: var(--amber); }
+  .radio-row{ display:flex; gap:18px; margin-bottom:16px; }
+  .radio-opt{ display:flex; align-items:center; gap:7px; font-size:13px; color: var(--text); cursor:pointer; }
+
+  .divider{ height:1px; background: var(--border-soft); margin:20px 0; }
+
+  .output-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:9px 0;
+    border-bottom:1px dashed var(--border-soft);
+    font-size:13px;
+  }
+  .output-row:last-child{ border-bottom:none; }
+  .output-row .label{ color: var(--text-dim); font-size:12px; }
+  .output-row .value{ font-family:'IBM Plex Mono', monospace; font-weight:600; color: var(--text-bright); font-size:15px; }
+  .value.pos{ color: var(--green); }
+  .value.neg{ color: var(--red); }
+  .value.warn{ color: var(--amber); }
+
+  .big-readout{
+    text-align:center;
+    padding:26px 10px 10px;
+  }
+  .big-readout .num{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:44px;
+    color: var(--text-bright);
+  }
+  .big-readout .num.pos{ color: var(--green); }
+  .big-readout .num.neg{ color: var(--red); }
+  .big-readout .cap{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color: var(--text-dim);
+    margin-top:6px;
+  }
+
+  /* gauge */
+  .gauge-wrap{ display:flex; justify-content:center; margin: 6px 0 4px; }
+
+  /* R:R bar */
+  .rr-bar{
+    display:flex;
+    height:38px;
+    border-radius: var(--radius);
+    overflow:hidden;
+    border:1px solid var(--border);
+    margin-top:6px;
+  }
+  .rr-bar .risk-seg{ background: linear-gradient(90deg, #4A1F24, var(--red)); display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#fff; }
+  .rr-bar .reward-seg{ background: linear-gradient(90deg, var(--green), #1B4A38); display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#06120C; font-weight:600; }
+
+  /* strategy cards */
+  .strat-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  @media (max-width: 760px){ .strat-grid{ grid-template-columns: 1fr; } }
+  .strat-card{
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    padding:20px;
+  }
+  .strat-head{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .strat-name{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:16px; color: var(--text-bright); }
+  .risk-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    padding:3px 8px;
+    border-radius:2px;
+    white-space:nowrap;
+  }
+  .risk-tag.low{ background: var(--green-dim); color: var(--green); }
+  .risk-tag.med{ background: var(--amber-dim); color: var(--amber); }
+  .risk-tag.high{ background: var(--red-dim); color: var(--red); }
+  .strat-desc{ font-size:13px; line-height:1.6; color: var(--text); margin-bottom:14px; }
+  .strat-meta{ display:flex; gap:18px; flex-wrap:wrap; }
+  .strat-meta div{ font-size:11px; color: var(--text-dim); }
+  .strat-meta b{ display:block; color: var(--text-bright); font-family:'IBM Plex Mono',monospace; font-size:12px; margin-top:2px; }
+
+  /* simulator */
+  .sim-controls{ display:grid; grid-template-columns: repeat(5,1fr); gap:12px; margin-bottom:18px; }
+  @media (max-width: 900px){ .sim-controls{ grid-template-columns: 1fr 1fr; } }
+  .btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    background: var(--amber);
+    color: #1A1206;
+    border:none;
+    padding:11px 20px;
+    border-radius: var(--radius);
+    cursor:pointer;
+    font-weight:600;
+    letter-spacing:0.02em;
+    transition: filter .15s ease;
+  }
+  .btn:hover{ filter: brightness(1.1); }
+  .btn.ghost{
+    background: transparent;
+    color: var(--text-dim);
+    border:1px solid var(--border);
+  }
+  .btn.ghost:hover{ color: var(--text-bright); border-color:#3A4560; }
+  canvas{ width:100%; display:block; }
+  .sim-stats{ display:grid; grid-template-columns: repeat(4,1fr); gap:14px; margin-top:18px; }
+  @media (max-width: 700px){ .sim-stats{ grid-template-columns: 1fr 1fr; } }
+  .stat-box{ background: var(--panel-2); border:1px solid var(--border-soft); border-radius: var(--radius); padding:14px; text-align:center; }
+  .stat-box .v{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:18px; color: var(--text-bright); }
+  .stat-box .l{ font-size:10px; color: var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; margin-top:4px; }
+
+  footer{
+    max-width:1120px;
+    margin:40px auto 0;
+    padding:18px 24px;
+    border-top:1px solid var(--border-soft);
+    font-size:11px;
+    color: var(--text-dim);
+    line-height:1.6;
+  }
+  footer b{ color: var(--amber); }
+</style>
+</head>
+<body>
+
+<div class="ticker-wrap">
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
+<header class="hero">
+  <div>
+    <div class="eyebrow">Educational Toolkit · No Live Execution</div>
+    <h1>STRATA<span> / trading utilities desk</span></h1>
+  </div>
+  <div class="hero-sub">Position sizing, risk framing, and P&amp;L math for stocks and forex — worked out before you place the trade, not after.</div>
+</header>
+
+<nav class="deck">
+  <button class="key active" data-panel="sizing"><span class="fk">F1</span>POSITION SIZE</button>
+  <button class="key" data-panel="rr"><span class="fk">F2</span>RISK / REWARD</button>
+  <button class="key" data-panel="pl"><span class="fk">F3</span>P&amp;L CALC</button>
+  <button class="key" data-panel="strategies"><span class="fk">F4</span>STRATEGY LIBRARY</button>
+  <button class="key" data-panel="sim"><span class="fk">F5</span>EQUITY SIMULATOR</button>
+</nav>
+
+<main>
+
+  <!-- ===================== F1 POSITION SIZING ===================== -->
+  <section class="panel active" id="panel-sizing">
+    <div class="grid">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Inputs</div>
+        <div class="card-desc">Set your account size and how much of it you're willing to risk on a single idea. The stop distance does the rest.</div>
+
+        <div class="field">
+          <label>Account balance ($)</label>
+          <input type="number" id="ps-balance" value="10000" min="0" step="100">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Risk per trade (%)</label>
+            <input type="number" id="ps-risk" value="1" min="0" step="0.1">
+          </div>
+          <div class="field">
+            <label>Entry price</label>
+            <input type="number" id="ps-entry" value="100" min="0" step="0.01">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Stop-loss price</label>
+            <input type="number" id="ps-stop" value="97" min="0" step="0.01">
+          </div>
+          <div class="field">
+            <label>Take-profit price (optional)</label>
+            <input type="number" id="ps-target" value="109" min="0" step="0.01">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Sized position</div>
+        <div class="card-desc">This is arithmetic on the numbers you entered — not a recommendation on any specific security.</div>
+
+        <div class="big-readout">
+          <div class="num" id="ps-size">0</div>
+          <div class="cap">Units / shares to buy</div>
+        </div>
+
+        <div class="gauge-wrap">
+          <svg width="180" height="100" viewBox="0 0 180 100" id="ps-gauge"></svg>
+        </div>
+
+        <div class="output-row"><span class="label">Dollar risk at stop</span><span class="value neg" id="ps-riskamt">$0</span></div>
+        <div class="output-row"><span class="label">Position value</span><span class="value" id="ps-posvalue">$0</span></div>
+        <div class="output-row"><span class="label">Reward-to-risk ratio</span><span class="value warn" id="ps-rr">—</span></div>
+        <div class="output-row"><span class="label">% of account deployed</span><span class="value" id="ps-pctacct">0%</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== F2 RISK / REWARD ===================== -->
+  <section class="panel" id="panel-rr">
+    <div class="grid">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Trade levels</div>
+        <div class="card-desc">Map the distance from entry to stop against entry to target, long or short.</div>
+
+        <div class="radio-row">
+          <label class="radio-opt"><input type="radio" name="rr-dir" value="long" checked> Long</label>
+          <label class="radio-opt"><input type="radio" name="rr-dir" value="short"> Short</label>
+        </div>
+
+        <div class="field">
+          <label>Entry price</label>
+          <input type="number" id="rr-entry" value="50" step="0.01">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Stop-loss</label>
+            <input type="number" id="rr-stop" value="48" step="0.01">
+          </div>
+          <div class="field">
+            <label>Take-profit</label>
+            <input type="number" id="rr-target" value="56" step="0.01">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Visual read</div>
+        <div class="card-desc">Red is what you're putting up. Green is what you're aiming to take.</div>
+
+        <div class="rr-bar" id="rr-visual"></div>
+
+        <div class="divider"></div>
+
+        <div class="output-row"><span class="label">Risk (points)</span><span class="value neg" id="rr-riskpts">0</span></div>
+        <div class="output-row"><span class="label">Reward (points)</span><span class="value pos" id="rr-rewardpts">0</span></div>
+        <div class="output-row"><span class="label">Reward-to-risk</span><span class="value warn" id="rr-ratio">—</span></div>
+        <div class="output-row"><span class="label">Win rate needed to break even</span><span class="value" id="rr-breakeven">—</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== F3 P&L CALC ===================== -->
+  <section class="panel" id="panel-pl">
+    <div class="grid">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Trade details</div>
+        <div class="card-desc">Works for equities (shares) or forex (units) — pick the market and drop in your fill prices.</div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Market</label>
+            <select id="pl-market">
+              <option value="stock">Stocks / ETFs</option>
+              <option value="forex">Forex (units)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Direction</label>
+            <select id="pl-dir">
+              <option value="long">Long</option>
+              <option value="short">Short</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Entry price</label>
+            <input type="number" id="pl-entry" value="1.0850" step="0.0001">
+          </div>
+          <div class="field">
+            <label>Exit price</label>
+            <input type="number" id="pl-exit" value="1.0920" step="0.0001">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Quantity (shares / units)</label>
+            <input type="number" id="pl-qty" value="10000" step="1">
+          </div>
+          <div class="field">
+            <label>Leverage (×)</label>
+            <input type="number" id="pl-lev" value="10" step="1" min="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Fees / commission ($, round trip)</label>
+          <input type="number" id="pl-fees" value="0" step="0.01" min="0">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Result</div>
+        <div class="card-desc">Gross move minus fees. Leverage changes margin required, not the P&amp;L itself.</div>
+
+        <div class="big-readout">
+          <div class="num" id="pl-result">$0.00</div>
+          <div class="cap" id="pl-pct">0.00% return on notional</div>
+        </div>
+
+        <div class="output-row"><span class="label">Notional position value</span><span class="value" id="pl-notional">$0</span></div>
+        <div class="output-row"><span class="label">Margin required</span><span class="value" id="pl-margin">$0</span></div>
+        <div class="output-row"><span class="label">Return on margin</span><span class="value" id="pl-roi">0%</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== F4 STRATEGY LIBRARY ===================== -->
+  <section class="panel" id="panel-strategies">
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title"><span class="dot"></span>Reading this library</div>
+      <div class="card-desc" style="margin-bottom:0;">Six recurring approaches traders build systems around. These are descriptions of mechanics and trade-offs, not signals — pair whichever fits your temperament with the risk tools on the other tabs.</div>
+    </div>
+    <div class="strat-grid" id="strategy-grid"></div>
+  </section>
+
+  <!-- ===================== F5 EQUITY SIMULATOR ===================== -->
+  <section class="panel" id="panel-sim">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Expectancy simulator</div>
+      <div class="card-desc">Feed in a win rate and average win/loss size, and watch what a long run of trades with that edge actually looks like. Randomness included on purpose — one clean equity curve is a myth even with a real edge.</div>
+
+      <div class="sim-controls">
+        <div class="field" style="margin:0;">
+          <label>Starting balance</label>
+          <input type="number" id="sim-balance" value="10000" step="100">
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Win rate (%)</label>
+          <input type="number" id="sim-winrate" value="45" step="1" min="0" max="100">
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Avg win (%)</label>
+          <input type="number" id="sim-avgwin" value="2.5" step="0.1">
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Avg loss (%)</label>
+          <input type="number" id="sim-avgloss" value="1" step="0.1">
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Number of trades</label>
+          <input type="number" id="sim-trades" value="150" step="10" min="10" max="1000">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-bottom:18px;">
+        <button class="btn" id="sim-run">Run simulation</button>
+        <button class="btn ghost" id="sim-reset">Reset</button>
+      </div>
+
+      <canvas id="sim-canvas" height="280"></canvas>
+
+      <div class="sim-stats">
+        <div class="stat-box"><div class="v" id="stat-final">—</div><div class="l">Ending balance</div></div>
+        <div class="stat-box"><div class="v" id="stat-return">—</div><div class="l">Total return</div></div>
+        <div class="stat-box"><div class="v" id="stat-dd">—</div><div class="l">Max drawdown</div></div>
+        <div class="stat-box"><div class="v" id="stat-expectancy">—</div><div class="l">Expectancy / trade</div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <b>Educational tool only.</b> Every calculation on this page is basic arithmetic applied to numbers you enter — it is not financial advice, a recommendation to buy or sell any security, or a signal. The equity simulator uses randomized outcomes and does not predict real market performance. Trading stocks and forex carries risk of loss; leverage magnifies both gains and losses. Consider consulting a licensed financial advisor before trading.
+</footer>
+
+<script>
+/* ===================== NAV ===================== */
+const keys = document.querySelectorAll('.key');
+const panels = document.querySelectorAll('.panel');
+keys.forEach(k=>{
+  k.addEventListener('click', ()=>{
+    keys.forEach(x=>x.classList.remove('active'));
+    panels.forEach(p=>p.classList.remove('active'));
+    k.classList.add('active');
+    document.getElementById('panel-'+k.dataset.panel).classList.add('active');
+  });
+});
+
+/* ===================== TICKER ===================== */
+const symbols = [
+  ['EUR/USD',1.0872],['GBP/USD',1.2701],['USD/JPY',158.42],['AAPL',221.14],
+  ['MSFT',438.90],['TSLA',312.55],['NVDA',146.28],['XAU/USD',2381.60],
+  ['SPY',548.32],['USD/CHF',0.8965],['AUD/USD',0.6614],['BTC/USD',67210]
+];
+function buildTicker(){
+  const track = document.getElementById('tickerTrack');
+  let html = '';
+  for(let rep=0; rep<2; rep++){
+    symbols.forEach(([sym, price])=>{
+      const chg = (Math.random()*2-1)*1.4;
+      const up = chg >= 0;
+      html += `<div class="ticker-item ${up?'up':'down'}">
+        <span class="sym">${sym}</span>
+        <span>${price.toLocaleString(undefined,{maximumFractionDigits:4})}</span>
+        <span class="chg">${up?'▲':'▼'} ${Math.abs(chg).toFixed(2)}%</span>
+      </div>`;
+    });
+  }
+  track.innerHTML = html;
+}
+buildTicker();
+
+/* ===================== HELPERS ===================== */
+const $ = id => document.getElementById(id);
+const fmt$ = n => (n<0?'-$':'$') + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtN = n => n.toLocaleString(undefined,{maximumFractionDigits:2});
+
+/* ===================== F1 POSITION SIZING ===================== */
+function drawGauge(pct){
+  // pct: 0-100+, semicircle gauge
+  const svg = $('ps-gauge');
+  const clamped = Math.min(pct, 10); // scale 0-10%
+  const angle = (clamped/10) * 180; // degrees across semicircle
+  const rad = (angle * Math.PI)/180;
+  const cx=90, cy=90, r=70;
+  const x = cx - r*Math.cos(rad);
+  const y = cy - r*Math.sin(rad);
+  const largeArc = angle > 180 ? 1 : 0;
+  let color = 'var(--green)';
+  if(pct > 5) color = 'var(--red)';
+  else if(pct > 2) color = 'var(--amber)';
+
+  svg.innerHTML = `
+    <path d="M 20 90 A 70 70 0 0 1 160 90" stroke="#232B3D" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <path d="M 20 90 A 70 70 0 0 1 ${x} ${y}" stroke="${color}" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <circle cx="${x}" cy="${y}" r="5" fill="${color}"/>
+    <text x="90" y="80" text-anchor="middle" font-family="IBM Plex Mono" font-size="20" font-weight="600" fill="#EDF1F7">${pct.toFixed(2)}%</text>
+    <text x="90" y="96" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#6B7688" letter-spacing="1">OF ACCOUNT AT RISK</text>
+  `;
+}
+
+function calcSizing(){
+  const balance = parseFloat($('ps-balance').value) || 0;
+  const riskPct = parseFloat($('ps-risk').value) || 0;
+  const entry = parseFloat($('ps-entry').value) || 0;
+  const stop = parseFloat($('ps-stop').value) || 0;
+  const target = parseFloat($('ps-target').value);
+
+  const riskAmt = balance * (riskPct/100);
+  const perUnitRisk = Math.abs(entry - stop);
+  const size = perUnitRisk > 0 ? riskAmt / perUnitRisk : 0;
+  const posValue = size * entry;
+  const pctAcct = balance > 0 ? (posValue/balance)*100 : 0;
+
+  $('ps-size').textContent = fmtN(size);
+  $('ps-riskamt').textContent = fmt$(riskAmt);
+  $('ps-posvalue').textContent = fmt$(posValue);
+  $('ps-pctacct').textContent = pctAcct.toFixed(1)+'%';
+
+  if(!isNaN(target) && target > 0){
+    const reward = Math.abs(target - entry) * size;
+    const ratio = riskAmt > 0 ? reward/riskAmt : 0;
+    $('ps-rr').textContent = '1 : ' + ratio.toFixed(2);
+  } else {
+    $('ps-rr').textContent = '—';
+  }
+
+  drawGauge(riskPct);
+}
+['ps-balance','ps-risk','ps-entry','ps-stop','ps-target'].forEach(id=>{
+  $(id).addEventListener('input', calcSizing);
+});
+calcSizing();
+
+/* ===================== F2 RISK/REWARD ===================== */
+function calcRR(){
+  const dir = document.querySelector('input[name="rr-dir"]:checked').value;
+  const entry = parseFloat($('rr-entry').value) || 0;
+  const stop = parseFloat($('rr-stop').value) || 0;
+  const target = parseFloat($('rr-target').value) || 0;
+
+  const riskPts = Math.abs(entry - stop);
+  const rewardPts = Math.abs(target - entry);
+  const ratio = riskPts > 0 ? rewardPts/riskPts : 0;
+  const breakeven = ratio > 0 ? (1/(1+ratio))*100 : 0;
+
+  $('rr-riskpts').textContent = fmtN(riskPts);
+  $('rr-rewardpts').textContent = fmtN(rewardPts);
+  $('rr-ratio').textContent = '1 : ' + ratio.toFixed(2);
+  $('rr-breakeven').textContent = breakeven.toFixed(1)+'%';
+
+  const total = riskPts + rewardPts;
+  const riskShare = total > 0 ? (riskPts/total)*100 : 50;
+  const rewardShare = 100 - riskShare;
+  const bar = $('rr-visual');
+  bar.innerHTML = `
+    <div class="risk-seg" style="width:${riskShare}%">RISK ${fmtN(riskPts)}</div>
+    <div class="reward-seg" style="width:${rewardShare}%">REWARD ${fmtN(rewardPts)}</div>
+  `;
+}
+['rr-entry','rr-stop','rr-target'].forEach(id=> $(id).addEventListener('input', calcRR));
+document.querySelectorAll('input[name="rr-dir"]').forEach(r=> r.addEventListener('change', calcRR));
+calcRR();
+
+/* ===================== F3 P&L CALC ===================== */
+function calcPL(){
+  const market = $('pl-market').value;
+  const dir = $('pl-dir').value;
+  const entry = parseFloat($('pl-entry').value) || 0;
+  const exit = parseFloat($('pl-exit').value) || 0;
+  const qty = parseFloat($('pl-qty').value) || 0;
+  const lev = Math.max(parseFloat($('pl-lev').value) || 1, 1);
+  const fees = parseFloat($('pl-fees').value) || 0;
+
+  let gross = dir === 'long' ? (exit - entry) * qty : (entry - exit) * qty;
+  const net = gross - fees;
+  const notional = entry * qty;
+  const margin = notional / lev;
+  const pctReturn = notional !== 0 ? (net/notional)*100 : 0;
+  const roiOnMargin = margin !== 0 ? (net/margin)*100 : 0;
+
+  const resultEl = $('pl-result');
+  resultEl.textContent = fmt$(net);
+  resultEl.className = 'num ' + (net > 0 ? 'pos' : net < 0 ? 'neg' : '');
+  $('pl-pct').textContent = pctReturn.toFixed(3)+'% return on notional';
+  $('pl-notional').textContent = fmt$(notional);
+  $('pl-margin').textContent = fmt$(margin);
+  const roiEl = $('pl-roi');
+  roiEl.textContent = roiOnMargin.toFixed(2)+'%';
+  roiEl.className = 'value ' + (roiOnMargin > 0 ? 'pos' : roiOnMargin < 0 ? 'neg' : '');
+}
+['pl-market','pl-dir','pl-entry','pl-exit','pl-qty','pl-lev','pl-fees'].forEach(id=>{
+  $(id).addEventListener('input', calcPL);
+  $(id).addEventListener('change', calcPL);
+});
+calcPL();
+
+/* ===================== F4 STRATEGY LIBRARY ===================== */
+const strategies = [
+  {
+    name:'Trend Following', risk:'med',
+    desc:'Enter in the direction of an established price trend (via moving averages, channel breaks, or momentum) and stay in as long as the trend persists. Wins are typically fewer but larger; losses are cut quickly when the trend fails.',
+    timeframe:'Days – months', winRate:'35–45%', typical:'Trailing stop'
+  },
+  {
+    name:'Breakout Trading', risk:'high',
+    desc:'Enter when price pushes through a defined support/resistance level or consolidation range, on the idea that the break attracts follow-through volume. Prone to false breaks in choppy conditions.',
+    timeframe:'Minutes – days', winRate:'30–45%', typical:'Fixed stop below range'
+  },
+  {
+    name:'Mean Reversion', risk:'med',
+    desc:'Bet that price snaps back toward an average after stretching too far, using tools like RSI, Bollinger Bands, or z-scores. Works best in range-bound markets and can be punished hard in strong trends.',
+    timeframe:'Hours – days', winRate:'55–70%', typical:'Tight, time-based exit'
+  },
+  {
+    name:'Scalping', risk:'high',
+    desc:'Take many small, fast trades on tiny price moves, often holding for seconds to minutes. Depends on low spreads/fees and fast execution; transaction costs can erode the edge quickly.',
+    timeframe:'Seconds – minutes', winRate:'50–65%', typical:'Very tight stops'
+  },
+  {
+    name:'Swing Trading', risk:'med',
+    desc:'Hold positions for several days to weeks to capture a broader price swing, blending technical setups with a longer view. Fewer trades than scalping, more tolerance needed for overnight risk.',
+    timeframe:'Days – weeks', winRate:'40–55%', typical:'Structure-based stop'
+  },
+  {
+    name:'Range / Grid Trading', risk:'high',
+    desc:'Buy near range support and sell near range resistance (or run a grid of orders across a range), assuming price oscillates rather than trends. Breaks out of range can generate a fast string of losses.',
+    timeframe:'Hours – days', winRate:'60–75%', typical:'Range boundary stop'
+  },
+];
+function riskLabel(r){ return r==='low'?'Low risk': r==='med'?'Medium risk':'High risk'; }
+const stratGrid = $('strategy-grid');
+stratGrid.innerHTML = strategies.map(s=>`
+  <div class="strat-card">
+    <div class="strat-head">
+      <div class="strat-name">${s.name}</div>
+      <div class="risk-tag ${s.risk}">${riskLabel(s.risk)}</div>
+    </div>
+    <div class="strat-desc">${s.desc}</div>
+    <div class="strat-meta">
+      <div>Timeframe<b>${s.timeframe}</b></div>
+      <div>Typical win rate<b>${s.winRate}</b></div>
+      <div>Common exit<b>${s.typical}</b></div>
+    </div>
+  </div>
+`).join('');
+
+/* ===================== F5 EQUITY SIMULATOR ===================== */
+const canvas = $('sim-canvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas(){
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = 280 * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+window.addEventListener('resize', ()=>{ resizeCanvas(); if(lastCurve) drawCurve(lastCurve); });
+
+let lastCurve = null;
+
+function runSimulation(){
+  const balance0 = parseFloat($('sim-balance').value) || 10000;
+  const winRate = Math.min(Math.max(parseFloat($('sim-winrate').value)||0,0),100)/100;
+  const avgWinPct = (parseFloat($('sim-avgwin').value)||0)/100;
+  const avgLossPct = Math.abs(parseFloat($('sim-avgloss').value)||0)/100;
+  const numTrades = Math.min(Math.max(parseInt($('sim-trades').value)||100,10),1000);
+
+  let bal = balance0;
+  let peak = balance0;
+  let maxDD = 0;
+  let wins=0, losses=0;
+  const curve = [balance0];
+
+  for(let i=0;i<numTrades;i++){
+    const isWin = Math.random() < winRate;
+    if(isWin){ bal *= (1+avgWinPct); wins++; }
+    else { bal *= (1-avgLossPct); losses++; }
+    if(bal>peak) peak = bal;
+    const dd = (peak-bal)/peak*100;
+    if(dd>maxDD) maxDD = dd;
+    curve.push(bal);
+  }
+
+  const totalReturn = ((bal-balance0)/balance0)*100;
+  const expectancy = (winRate*avgWinPct) - ((1-winRate)*avgLossPct);
+
+  $('stat-final').textContent = fmt$(bal);
+  const retEl = $('stat-return');
+  retEl.textContent = (totalReturn>=0?'+':'')+totalReturn.toFixed(1)+'%';
+  retEl.style.color = totalReturn>=0 ? 'var(--green)' : 'var(--red)';
+  $('stat-dd').textContent = '-'+maxDD.toFixed(1)+'%';
+  $('stat-expectancy').textContent = (expectancy>=0?'+':'')+(expectancy*100).toFixed(2)+'%';
+
+  lastCurve = curve;
+  drawCurve(curve);
+}
+
+function drawCurve(curve){
+  resizeCanvas();
+  const w = canvas.getBoundingClientRect().width;
+  const h = 280;
+  ctx.clearRect(0,0,w,h);
+
+  const min = Math.min(...curve);
+  const max = Math.max(...curve);
+  const pad = 20;
+  const range = (max-min) || 1;
+
+  // gridlines
+  ctx.strokeStyle = '#1A2130';
+  ctx.lineWidth = 1;
+  for(let i=0;i<=4;i++){
+    const y = pad + (h-pad*2)*(i/4);
+    ctx.beginPath();
+    ctx.moveTo(0,y);
+    ctx.lineTo(w,y);
+    ctx.stroke();
+  }
+
+  // starting balance line
+  const startY = h - pad - ((curve[0]-min)/range)*(h-pad*2);
+  ctx.strokeStyle = '#2A3346';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(0,startY);
+  ctx.lineTo(w,startY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // equity curve
+  const rising = curve[curve.length-1] >= curve[0];
+  const lineColor = rising ? '#35D28A' : '#F0555F';
+  const grad = ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0, rising ? 'rgba(53,210,138,0.25)' : 'rgba(240,85,95,0.25)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.beginPath();
+  curve.forEach((v,i)=>{
+    const x = (i/(curve.length-1))*w;
+    const y = h - pad - ((v-min)/range)*(h-pad*2);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // fill under curve
+  ctx.lineTo(w,h);
+  ctx.lineTo(0,h);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+$('sim-run').addEventListener('click', runSimulation);
+$('sim-reset').addEventListener('click', ()=>{
+  $('sim-balance').value = 10000;
+  $('sim-winrate').value = 45;
+  $('sim-avgwin').value = 2.5;
+  $('sim-avgloss').value = 1;
+  $('sim-trades').value = 150;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ['stat-final','stat-return','stat-dd','stat-expectancy'].forEach(id=> $(id).textContent='—');
+  lastCurve = null;
+});
+
+// initial render
+setTimeout(runSimulation, 100);
+</script>
+</body>
+</html>
